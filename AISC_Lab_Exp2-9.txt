@@ -1,0 +1,125 @@
+# Exp 2
+!apt-get install -y swi-prolog-nox > /dev/null
+
+
+%%writefile family.pl
+parent(ram, shyam).
+parent(ram, geeta).
+parent(shyam, mohan).
+male(ram). male(shyam). male(mohan).
+female(geeta).
+father(X,Y)      :- parent(X,Y), male(X).
+sibling(X,Y)     :- parent(Z,X), parent(Z,Y), X \= Y.
+grandparent(X,Y) :- parent(X,Z), parent(Z,Y).
+
+
+# Exp 2
+!swipl -q -g "father(ram,shyam), writeln(true)" -t halt family.pl
+!swipl -q -g "grandparent(X,mohan), writeln(X)" -t halt family.pl
+!swipl -q -g "sibling(shyam,Y), writeln(Y)" -t halt family.pl
+
+
+# Exp 3
+g = {'A':['B','C'], 'B':['D','E'], 'C':['F'], 'D':[], 'E':[], 'F':[]}
+
+def search(start, goal, bfs=True):
+    fr, order = [start], []
+    while fr:
+        n = fr.pop(0) if bfs else fr.pop()
+        order.append(n)
+        if n == goal: return order
+        fr += g[n] if bfs else g[n][::-1]
+
+b = search('A', 'E')
+d = search('A', 'E', bfs=False)
+print("BFS:", b, "| Nodes visited:", len(b))
+print("DFS:", d, "| Nodes visited:", len(d))
+print("Better here:", "BFS" if len(b) < len(d) else "DFS" if len(d) < len(b) else "Both equal")
+
+
+# Exp 4
+import math
+def minimax(d, i, is_max, s):
+    if d == math.log2(len(s)): return s[i]
+    a = minimax(d+1, 2*i,   not is_max, s)
+    b = minimax(d+1, 2*i+1, not is_max, s)
+    return max(a, b) if is_max else min(a, b)
+
+scores = [3, 5, 2, 9, 12, 5, 23, 23]
+print("Optimal value:", minimax(0, 0, True, scores))
+
+
+# Exp 5
+import numpy as np
+X = np.array([[0,0],[0,1],[1,0],[1,1]])
+
+def train(y, lr=0.1, epochs=20):
+    w, b = np.zeros(2), 0
+    for _ in range(epochs):
+        for xi, t in zip(X, y):
+            p = int(xi @ w + b > 0)
+            w += lr * (t - p) * xi
+            b += lr * (t - p)
+    return [int(xi @ w + b > 0) for xi in X]
+
+for name, y in {'AND':[0,0,0,1], 'OR':[0,1,1,1], 'XOR':[0,1,1,0]}.items():
+    print(name, "expected", y, "got", train(y))
+
+
+# Exp 6
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.cluster import KMeans
+from sklearn.metrics import accuracy_score
+
+X, y = load_iris(return_X_y=True)
+X = StandardScaler().fit_transform(X)
+
+Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=1)
+mlp = MLPClassifier(hidden_layer_sizes=(10,), max_iter=2000, random_state=1).fit(Xtr, ytr)
+print("MLP Accuracy:", accuracy_score(yte, mlp.predict(Xte)))
+
+km = KMeans(n_clusters=3, n_init=10, random_state=1).fit(X)
+print("Cluster labels:", km.labels_[:10])
+
+
+# Exp 7
+from transformers import pipeline
+gen = pipeline("text-generation", model="distilgpt2")
+
+for p in ["Artificial intelligence is", "The future of education"]:
+    out = gen(p, max_length=40, do_sample=True, temperature=0.7)
+    print(p, "->", out[0]['generated_text'], "\n")
+
+
+# Exp 8
+from transformers import pipeline
+slm = pipeline("text-generation", model="sshleifer/tiny-gpt2")
+
+out = slm("Machine learning is", max_length=30, do_sample=True, temperature=0.7)
+print(out[0]['generated_text'])
+
+
+# Exp 9
+!pip install scikit-fuzzy
+
+
+# Exp 9
+import numpy as np, skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+temp = ctrl.Antecedent(np.arange(0, 41, 1), 'temp')
+fan  = ctrl.Consequent(np.arange(0, 101, 1), 'fan')
+temp.automf(3, names=['low','med','high'])
+fan.automf(3,  names=['low','med','high'])
+
+rules = [ctrl.Rule(temp['low'],  fan['low']),
+         ctrl.Rule(temp['med'],  fan['med']),
+         ctrl.Rule(temp['high'], fan['high'])]
+
+sim = ctrl.ControlSystemSimulation(ctrl.ControlSystem(rules))
+sim.input['temp'] = 32
+sim.compute()
+print("Fan speed:", round(sim.output['fan'], 2))
